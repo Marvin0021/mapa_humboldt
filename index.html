@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Navegador COED Alejandro de Humboldt</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <!-- TomSelect CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #f8f9fa; color: #212529; }
+    #map { width: 100%; height: 100vh; background: #e9ecef; z-index: 1; }
+
+    /* Botón Flotante para Pantallas Pequeñas */
+    .btn-toggle-panel {
+      display: none;
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 1100;
+      background: #007bff;
+      color: #ffffff;
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      cursor: pointer;
+      font-size: 20px;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .btn-toggle-panel:active {
+      transform: scale(0.92);
+    }
+
+    /* Panel Flotante Blanco */
+    .control-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      width: 360px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .control-panel h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a202c;
+      margin: 0;
+    }
+
+    .control-panel p {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+
+    /* Formulario */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Estilos TomSelect en Modo Claro */
+    .ts-control {
+      background: #f8fafc !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 10px !important;
+      color: #0f172a !important;
+      font-size: 13px !important;
+      padding: 10px 12px !important;
+      box-shadow: none !important;
+    }
+    .ts-control input {
+      color: #0f172a !important;
+    }
+    .ts-dropdown {
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 10px !important;
+      color: #0f172a !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+      z-index: 2000 !important;
+    }
+    .ts-dropdown .option {
+      color: #334155 !important;
+      padding: 8px 12px !important;
+    }
+    .ts-dropdown .active, .ts-dropdown .option:hover {
+      background: #e0f2fe !important;
+      color: #0284c7 !important;
+    }
+    .ts-dropdown .optgroup-header {
+      color: #0284c7 !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      text-transform: uppercase;
+      background: #f1f5f9;
+      padding: 6px 10px !important;
+    }
+
+    /* Botones de acción */
+    .btn-route {
+      width: 100%;
+      padding: 12px;
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: all 0.2s ease;
+      margin-top: 14px;
+    }
+
+    .btn-route:hover {
+      background: #0369a1;
+    }
+
+    .btn-route:active {
+      transform: scale(0.98);
+    }
+
+    .btn-clear {
+      width: 100%;
+      padding: 10px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+      display: none;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      background: #fecaca;
+    }
+
+    /* Ajustes Adaptativos para Teléfonos */
+    @media (max-width: 600px) {
+      .btn-toggle-panel {
+        display: flex;
+      }
+
+      .control-panel {
+        top: 70px;
+        left: 15px;
+        right: 15px;
+        width: auto;
+        max-height: 80vh;
+        display: none; /* Se oculta/muestra mediante el botón */
+      }
+
+      .control-panel.active {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botón icono para desplegar panel en teléfonos -->
+  <button id="togglePanelBtn" class="btn-toggle-panel" onclick="toggleControlPanel()" title="Desplegar Opciones">
+    <i class="fa-solid fa-location-dot"></i>
+  </button>
+
+  <div class="control-panel" id="controlPanel">
+    <div class="panel-header">
+      <h1>Mapa Humboldt</h1>
+    </div>
+    <p>Selecciona tus puntos de origen y destino para guiarte en el mapa.</p>
+
+    <div class="form-group">
+      <label for="selectOrigen">Origen:</label>
+      <select id="selectOrigen" placeholder="Buscar ubicación de origen..."></select>
+    </div>
+
+    <div class="form-group">
+      <label for="selectDestino">Destino:</label>
+      <select id="selectDestino" placeholder="Buscar ubicación de destino..."></select>
+    </div>
+
+    <button class="btn-route" onclick="calcularRuta()">
+      <i class="fa-solid fa-route"></i> Trazar Ruta
+    </button>
+    <button id="btnClear" class="btn-clear" onclick="limpiarRuta()">
+      Limpiar Ruta
+    </button>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- TomSelect JS -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+  <script>
+    // BASE DE DATOS DE NODOS
+    const nodos = {
+      "p_cra__p1_": { "pos": [517, 232], "nombre": "CRA (P1)", "tipo": "puerta", "categoria": "aulas", "num": 0 },
+      "r_pasillo_p1_1": { "pos": [517, 217], "nombre": "Punto Pasillo 1 (P1)", "tipo": "pasillo" },
+      "p_centro_de_computo__p1_": { "pos": [452, 248], "nombre": "CENTRO DE CÓMPUTO (P1)", "tipo": "puerta", "categoria": "aulas", "num": 0.1 },
+      "p_direcci_n__p1_": { "pos": [452, 289], "nombre": "DIRECCIÓN (P1)", "tipo": "puerta", "categoria": "admin" },
+      "r_pasillo_p1_2": { "pos": [440, 249], "nombre": "Punto Pasillo 2 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_3": { "pos": [440, 290], "nombre": "Punto Pasillo 3 (P1)", "tipo": "pasillo" },
+      "p_consejer_a_escolar__p1_": { "pos": [417, 309], "nombre": "CONSEJERÍA ESCOLAR (P1)", "tipo": "puerta", "categoria": "admin" },
+      "p_secretar_a__p1_": { "pos": [440, 308], "nombre": "SECRETARÍA (P1)", "tipo": "puerta", "categoria": "admin" },
+      "r_pasillo_p1_5": { "pos": [417, 291], "nombre": "Punto Pasillo 5 (P1)", "tipo": "pasillo" },
+      "p_ba_o_de_ni_as_1__p1_": { "pos": [475, 409], "nombre": "BAÑO DE NIÑAS 1 (P1)", "tipo": "puerta", "categoria": "banos" },
+      "p_ba_o_de_maestros__p1_": { "pos": [465, 452], "nombre": "BAÑO DE MAESTROS (P1)", "tipo": "puerta", "categoria": "banos" },
+      "r_pasillo_p1_6": { "pos": [459, 410], "nombre": "Punto Pasillo 6 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_7": { "pos": [459, 453], "nombre": "Punto Pasillo 7 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_8": { "pos": [459, 369], "nombre": "Punto Pasillo 8 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_9": { "pos": [414, 369], "nombre": "Punto Pasillo 9 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_10": { "pos": [414, 415], "nombre": "Punto Pasillo 10 (P1)", "tipo": "pasillo" },
+      "p_lavadero_1__p1_": { "pos": [403, 416], "nombre": "LAVADERO 1 (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "r_pasillo_p1_11": { "pos": [395, 369], "nombre": "Punto Pasillo 11 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_12": { "pos": [395, 382], "nombre": "Punto Pasillo 12 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_13": { "pos": [370, 384], "nombre": "Punto Pasillo 13 (P1)", "tipo": "pasillo" },
+      "p_port_n_1__p1_": { "pos": [441, 161], "nombre": "PORTÓN 1 (P1)", "tipo": "puerta", "categoria": "portones" },
+      "r_pasillo_p1_14": { "pos": [441, 217], "nombre": "Punto Pasillo 14 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_15": { "pos": [479, 216], "nombre": "Punto Pasillo 15 (P1)", "tipo": "pasillo" },
+      "p_entrada__p1_": { "pos": [371, 160], "nombre": "ENTRADA PRINCIPAL (P1)", "tipo": "puerta", "categoria": "portones" },
+      "r_pasillo_p1_16": { "pos": [370, 234], "nombre": "Punto Pasillo 16 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_17": { "pos": [371, 286], "nombre": "Punto Pasillo 17 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_18": { "pos": [395, 286], "nombre": "Punto Pasillo 18 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_19": { "pos": [313, 286], "nombre": "Punto Pasillo 19 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_20": { "pos": [295, 286], "nombre": "Punto Pasillo 20 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_21": { "pos": [313, 418], "nombre": "Punto Pasillo 21 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_22": { "pos": [295, 417], "nombre": "Punto Pasillo 22 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_23": { "pos": [314, 447], "nombre": "Punto Pasillo 23 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_24": { "pos": [313, 611], "nombre": "Punto Pasillo 24 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_25": { "pos": [285, 611], "nombre": "Punto Pasillo 25 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_26": { "pos": [286, 717], "nombre": "Punto Pasillo 26 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_27": { "pos": [284, 705], "nombre": "Punto Pasillo 27 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_28": { "pos": [313, 717], "nombre": "Punto Pasillo 28 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_29": { "pos": [285, 752], "nombre": "Punto Pasillo 29 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_30": { "pos": [324, 751], "nombre": "Punto Pasillo 30 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_31": { "pos": [371, 751], "nombre": "Punto Pasillo 31 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_32": { "pos": [370, 718], "nombre": "Punto Pasillo 32 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_34": { "pos": [371, 693], "nombre": "Punto Pasillo 34 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_35": { "pos": [245, 706], "nombre": "Punto Pasillo 35 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_36": { "pos": [220, 706], "nombre": "Punto Pasillo 36 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_37": { "pos": [491, 693], "nombre": "Punto Pasillo 37 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_38": { "pos": [491, 841], "nombre": "Punto Pasillo 38 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_39": { "pos": [468, 673], "nombre": "Punto Pasillo 39 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_40": { "pos": [468, 586], "nombre": "Punto Pasillo 40 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_41": { "pos": [371, 675], "nombre": "Punto Pasillo 41 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_42": { "pos": [371, 563], "nombre": "Punto Pasillo 42 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_43": { "pos": [418, 563], "nombre": "Punto Pasillo 43 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_44": { "pos": [371, 419], "nombre": "Punto Pasillo 44 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_45": { "pos": [307, 171], "nombre": "Punto Pasillo 45 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_46": { "pos": [229, 171], "nombre": "Punto Pasillo 46 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_47": { "pos": [230, 192], "nombre": "Punto Pasillo 47 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_48": { "pos": [292, 193], "nombre": "Punto Pasillo 48 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_49": { "pos": [229, 210], "nombre": "Punto Pasillo 49 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_51": { "pos": [210, 209], "nombre": "Punto Pasillo 51 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_52": { "pos": [109, 221], "nombre": "Punto Pasillo 52 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_53": { "pos": [108, 255], "nombre": "Punto Pasillo 53 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_54": { "pos": [109, 348], "nombre": "Punto Pasillo 54 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_56": { "pos": [125, 221], "nombre": "Punto Pasillo 56 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_57": { "pos": [136, 255], "nombre": "Punto Pasillo 57 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_59": { "pos": [125, 417], "nombre": "Punto Pasillo 59 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_60": { "pos": [175, 418], "nombre": "Punto Pasillo 60 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_61": { "pos": [190, 418], "nombre": "Punto Pasillo 61 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_62": { "pos": [209, 417], "nombre": "Punto Pasillo 62 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_63": { "pos": [150, 418], "nombre": "Punto Pasillo 63 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_64": { "pos": [230, 418], "nombre": "Punto Pasillo 64 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_65": { "pos": [226, 418], "nombre": "Punto Pasillo 65 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_66": { "pos": [282, 418], "nombre": "Punto Pasillo 66 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_67": { "pos": [255, 511], "nombre": "Punto Pasillo 67 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_68": { "pos": [281, 611], "nombre": "Punto Pasillo 68 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_69": { "pos": [246, 610], "nombre": "Punto Pasillo 69 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_70": { "pos": [227, 611], "nombre": "Punto Pasillo 70 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_71": { "pos": [227, 492], "nombre": "Punto Pasillo 71 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_72": { "pos": [220, 610], "nombre": "Punto Pasillo 72 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_73": { "pos": [190, 611], "nombre": "Punto Pasillo 73 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_74": { "pos": [144, 611], "nombre": "Punto Pasillo 74 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_75": { "pos": [118, 611], "nombre": "Punto Pasillo 75 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_76": { "pos": [109, 595], "nombre": "Punto Pasillo 76 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_77": { "pos": [144, 860], "nombre": "Punto Pasillo 77 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_78": { "pos": [144, 819], "nombre": "Punto Pasillo 78 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_79": { "pos": [144, 725], "nombre": "Punto Pasillo 79 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_80": { "pos": [220, 825], "nombre": "Punto Pasillo 80 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_81": { "pos": [220, 744], "nombre": "Punto Pasillo 81 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_82": { "pos": [221, 639], "nombre": "Punto Pasillo 82 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_83": { "pos": [245, 653], "nombre": "Punto Pasillo 83 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_84": { "pos": [285, 677], "nombre": "Punto Pasillo 84 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_85": { "pos": [285, 645], "nombre": "Punto Pasillo 85 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_86": { "pos": [239, 418], "nombre": "Punto Pasillo 86 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_87": { "pos": [261, 418], "nombre": "Punto Pasillo 87 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_88": { "pos": [230, 278], "nombre": "Punto Pasillo 88 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_89": { "pos": [370, 592], "nombre": "Punto Pasillo 89 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_90": { "pos": [370, 642], "nombre": "Punto Pasillo 90 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_91": { "pos": [163, 610], "nombre": "Punto Pasillo 91 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_92": { "pos": [179, 611], "nombre": "Punto Pasillo 92 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_94": { "pos": [246, 696], "nombre": "Punto Pasillo 94 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_95": { "pos": [110, 418], "nombre": "Punto Pasillo 95 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_96": { "pos": [294, 192], "nombre": "Punto Pasillo 96 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_97": { "pos": [370, 241], "nombre": "Punto Pasillo 97 (P1)", "tipo": "pasillo" },
+      "p__rea_de_mesas___cocina__p1_": { "pos": [421, 520], "nombre": "ÁREA DE MESAS / COCINA (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_cocina__p1_": { "pos": [389, 593], "nombre": "COCINA (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "r_pasillo_p1_98": { "pos": [401, 674], "nombre": "Punto Pasillo 98 (P1)", "tipo": "pasillo" },
+      "p_cubiculo_depotivo__p1_": { "pos": [401, 667], "nombre": "CUBÍCULO DEPORTIVO (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_biodigestor__p1_": { "pos": [474, 586], "nombre": "BIODIGESTOR (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_aula_30__p1_": { "pos": [504, 841], "nombre": "AULA 30 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 30 },
+      "r_pasillo_p1_99": { "pos": [346, 214], "nombre": "Punto Pasillo 99 (P1)", "tipo": "pasillo" },
+      "p_port_n_2__p1_": { "pos": [346, 161], "nombre": "PORTÓN 2 (P1)", "tipo": "puerta", "categoria": "portones" },
+      "p_cancha_deportiva__p1_": { "pos": [397, 718], "nombre": "CANCHA DEPORTIVA (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_aula_23__p1_": { "pos": [325, 790], "nombre": "AULA 23 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 23 },
+      "p_aula_22__p1_": { "pos": [285, 761], "nombre": "AULA 22 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 22 },
+      "r_pasillo_p1_100": { "pos": [340, 447], "nombre": "Punto Pasillo 100 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p2_101": { "pos": [349, 447], "nombre": "Punto Pasillo 101 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_102": { "pos": [362, 447], "nombre": "Punto Pasillo 102 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_103": { "pos": [362, 472], "nombre": "Punto Pasillo 103 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_104": { "pos": [345, 472], "nombre": "Punto Pasillo 104 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_105": { "pos": [344, 497], "nombre": "Punto Pasillo 105 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_106": { "pos": [344, 536], "nombre": "Punto Pasillo 106 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_107": { "pos": [344, 573], "nombre": "Punto Pasillo 107 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_108": { "pos": [344, 615], "nombre": "Punto Pasillo 108 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p2_109": { "pos": [344, 662], "nombre": "Punto Pasillo 109 (P2)", "tipo": "pasillo" },
+      "p_aula_1__p2_": { "pos": [348, 497], "nombre": "AULA 1 (P2)", "tipo": "puerta", "categoria": "aulas", "num": 1 },
+      "p_aula_2__p2_": { "pos": [347, 536], "nombre": "AULA 2 (P2)", "tipo": "puerta", "categoria": "aulas", "num": 2 },
+      "p_aula_3__p2_": { "pos": [347, 615], "nombre": "AULA 3 (P2)", "tipo": "puerta", "categoria": "aulas", "num": 3 },
+      "p_aula_4__p2_": { "pos": [347, 662], "nombre": "AULA 4 (P2)", "tipo": "puerta", "categoria": "aulas", "num": 4 },
+      "p_aula_de_m_sica__p2_": { "pos": [347, 573], "nombre": "AULA DE MÚSICA (P2)", "tipo": "puerta", "categoria": "aulas", "num": 99 },
+      "r_pasillo_p2_110": { "pos": [341, 447], "nombre": "Punto Pasillo 110 (P2)", "tipo": "pasillo" },
+      "r_pasillo_p1_111": { "pos": [314, 686], "nombre": "Punto Pasillo 111 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_112": { "pos": [313, 616], "nombre": "Punto Pasillo 112 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_113": { "pos": [313, 580], "nombre": "Punto Pasillo 113 (P1)", "tipo": "pasillo" },
+      "r_pasillo_p1_114": { "pos": [314, 493], "nombre": "Punto Pasillo 114 (P1)", "tipo": "pasillo" },
+      "p_aula_6__p1_": { "pos": [317, 686], "nombre": "AULA 6 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 6 },
+      "p_aula_5__p1_": { "pos": [317, 616], "nombre": "AULA 5 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 5 },
+      "p_biblioteca_entrada_1__p1_": { "pos": [317, 493], "nombre": "BIBLIOTECA ENTRADA 1 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 0.2 },
+      "p_biblioteca_entrada_2__p1_": { "pos": [317, 580], "nombre": "BIBLIOTECA ENTRADA 2 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 0.3 },
+      "p_aula_21__p1_": { "pos": [245, 709], "nombre": "AULA 21 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 21 },
+      "p_aula_de_industrial__p1_": { "pos": [236, 824], "nombre": "AULA DE INDUSTRIAL (P1)", "tipo": "puerta", "categoria": "aulas", "num": 98 },
+      "p_taller_de_industrial__p1_": { "pos": [214, 825], "nombre": "TALLER DE INDUSTRIAL (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_aula_20__p1_": { "pos": [214, 744], "nombre": "AULA 20 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 20 },
+      "r_pasillo_p1_115": { "pos": [208, 611], "nombre": "Punto Pasillo 115 (P1)", "tipo": "pasillo" },
+      "p_aula_19__p1_": { "pos": [207, 627], "nombre": "AULA 19 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 19 },
+      "p_aula_17__p1_": { "pos": [154, 725], "nombre": "AULA 17 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 17 },
+      "p_aula_18__p1_": { "pos": [154, 819], "nombre": "AULA 18 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 18 },
+      "p__rea_de_mesas__p1_": { "pos": [133, 637], "nombre": "ÁREA DE MESAS (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "r_pasillo_p1_116": { "pos": [145, 637], "nombre": "Punto Pasillo 116 (P1)", "tipo": "pasillo" },
+      "p_aula_16__p1_": { "pos": [124, 597], "nombre": "AULA 16 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 16 },
+      "p_ba_o_de_ni_as_2__p1_": { "pos": [179, 597], "nombre": "BAÑO DE NIÑAS 2 (P1)", "tipo": "puerta", "categoria": "banos" },
+      "p_ba_o_de_varones__p1_": { "pos": [162, 598], "nombre": "BAÑO DE VARONES (P1)", "tipo": "puerta", "categoria": "banos" },
+      "p_aula_15__p1_": { "pos": [124, 434], "nombre": "AULA 15 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 15 },
+      "p_aula_14__p1_": { "pos": [175, 435], "nombre": "AULA 14 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 14 },
+      "p_aula_13__p1_": { "pos": [149, 395], "nombre": "AULA 13 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 13 },
+      "r_pasillo_p1_117": { "pos": [151, 418], "nombre": "Punto Pasillo 117 (P1)", "tipo": "pasillo" },
+      "p_aula_10__p1_": { "pos": [190, 396], "nombre": "AULA 10 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 10 },
+      "p_aula_25__p1_": { "pos": [208, 434], "nombre": "AULA 25 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 25 },
+      "p_lavadero_2__p1_": { "pos": [125, 213], "nombre": "LAVADERO 2 (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_port_n_3__p1_": { "pos": [108, 159], "nombre": "PORTÓN 3 (P1)", "tipo": "puerta", "categoria": "portones" },
+      "p_aula_12__p1_": { "pos": [139, 256], "nombre": "AULA 12 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 12 },
+      "p_aula_11__p1_": { "pos": [207, 210], "nombre": "AULA 11 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 11 },
+      "p_aula_9__p1_": { "pos": [240, 397], "nombre": "AULA 9 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 9 },
+      "p_sub_direcci_n__p1_": { "pos": [262, 397], "nombre": "SUB DIRECCIÓN (P1)", "tipo": "puerta", "categoria": "admin" },
+      "p_aula_24__p1_": { "pos": [283, 397], "nombre": "AULA 24 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 24 },
+      "p_aula_8__p1_": { "pos": [235, 278], "nombre": "AULA 8 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 8 },
+      "p_aula_7__p1_": { "pos": [290, 286], "nombre": "AULA 7 (P1)", "tipo": "puerta", "categoria": "aulas", "num": 7 },
+      "p_escenaro__p1_": { "pos": [282, 516], "nombre": "ESCENARIO (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_estacionamiento__p1_": { "pos": [345, 256], "nombre": "ESTACIONAMIENTO (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_chalet_1__p1_": { "pos": [291, 645], "nombre": "CHALET 1 (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_ciber__p1_": { "pos": [291, 678], "nombre": "CIBER (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_chalet_2__p1_": { "pos": [241, 653], "nombre": "CHALET 2 (P1)", "tipo": "puerta", "categoria": "institucion" },
+      "p_cafet_n__p1_": { "pos": [267, 653], "nombre": "CAFETÍN (P1)", "tipo": "puerta", "categoria": "institucion" }
+    };
+
+    // RED DE CONEXIONES
+    const conexiones = {
+      "p_cra__p1_": ["r_pasillo_p1_1"],
+      "r_pasillo_p1_1": ["p_cra__p1_", "r_pasillo_p1_15"],
+      "p_centro_de_computo__p1_": ["r_pasillo_p1_2"],
+      "p_direcci_n__p1_": ["r_pasillo_p1_3"],
+      "r_pasillo_p1_2": ["r_pasillo_p1_14", "r_pasillo_p1_3", "p_centro_de_computo__p1_"],
+      "r_pasillo_p1_3": ["p_secretar_a__p1_", "p_direcci_n__p1_", "r_pasillo_p1_5", "r_pasillo_p1_2"],
+      "p_consejer_a_escolar__p1_": ["r_pasillo_p1_5"],
+      "p_secretar_a__p1_": ["r_pasillo_p1_3"],
+      "r_pasillo_p1_5": ["p_consejer_a_escolar__p1_", "r_pasillo_p1_3", "r_pasillo_p1_18"],
+      "p_ba_o_de_ni_as_1__p1_": ["r_pasillo_p1_6"],
+      "p_ba_o_de_maestros__p1_": ["r_pasillo_p1_7"],
+      "r_pasillo_p1_6": ["p_ba_o_de_ni_as_1__p1_", "r_pasillo_p1_7", "r_pasillo_p1_8"],
+      "r_pasillo_p1_7": ["r_pasillo_p1_6", "p_ba_o_de_maestros__p1_"],
+      "r_pasillo_p1_8": ["r_pasillo_p1_6", "r_pasillo_p1_9"],
+      "r_pasillo_p1_9": ["r_pasillo_p1_8", "r_pasillo_p1_10", "r_pasillo_p1_11"],
+      "r_pasillo_p1_10": ["r_pasillo_p1_9", "p_lavadero_1__p1_"],
+      "p_lavadero_1__p1_": ["r_pasillo_p1_10"],
+      "r_pasillo_p1_11": ["r_pasillo_p1_9", "r_pasillo_p1_12", "r_pasillo_p1_18"],
+      "r_pasillo_p1_12": ["r_pasillo_p1_11", "r_pasillo_p1_13"],
+      "r_pasillo_p1_13": ["r_pasillo_p1_12", "r_pasillo_p1_17", "r_pasillo_p1_44"],
+      "p_port_n_1__p1_": ["r_pasillo_p1_14"],
+      "r_pasillo_p1_14": ["p_port_n_1__p1_", "r_pasillo_p1_2", "r_pasillo_p1_15"],
+      "r_pasillo_p1_15": ["r_pasillo_p1_1", "r_pasillo_p1_14"],
+      "p_entrada__p1_": ["r_pasillo_p1_16"],
+      "r_pasillo_p1_16": ["p_entrada__p1_", "r_pasillo_p1_17"],
+      "r_pasillo_p1_17": ["r_pasillo_p1_18", "r_pasillo_p1_13", "r_pasillo_p1_19", "r_pasillo_p1_16"],
+      "r_pasillo_p1_18": ["r_pasillo_p1_17", "r_pasillo_p1_11", "r_pasillo_p1_5"],
+      "r_pasillo_p1_19": ["r_pasillo_p1_17", "r_pasillo_p1_21", "r_pasillo_p1_20"],
+      "r_pasillo_p1_20": ["r_pasillo_p1_96", "r_pasillo_p1_22", "r_pasillo_p1_19", "p_aula_7__p1_"],
+      "r_pasillo_p1_21": ["r_pasillo_p1_23", "r_pasillo_p1_22", "r_pasillo_p1_19", "r_pasillo_p1_44"],
+      "r_pasillo_p1_22": ["r_pasillo_p1_21", "r_pasillo_p1_66", "r_pasillo_p1_20", "p_escenaro__p1_"],
+      "r_pasillo_p1_23": ["r_pasillo_p1_24", "r_pasillo_p1_21", "r_pasillo_p1_100", "r_pasillo_p1_114"],
+      "r_pasillo_p1_24": ["r_pasillo_p1_25", "r_pasillo_p1_28", "r_pasillo_p1_23", "r_pasillo_p1_113", "r_pasillo_p1_112"],
+      "r_pasillo_p1_25": ["r_pasillo_p1_85", "r_pasillo_p1_24", "r_pasillo_p1_68", "p_escenaro__p1_"],
+      "r_pasillo_p1_26": ["r_pasillo_p1_29", "r_pasillo_p1_27", "r_pasillo_p1_28"],
+      "r_pasillo_p1_27": ["r_pasillo_p1_26", "r_pasillo_p1_84", "r_pasillo_p1_35", "p_cafet_n__p1_"],
+      "r_pasillo_p1_28": ["r_pasillo_p1_24", "r_pasillo_p1_32", "r_pasillo_p1_26"],
+      "r_pasillo_p1_29": ["r_pasillo_p1_30", "r_pasillo_p1_26", "p_aula_22__p1_"],
+      "r_pasillo_p1_30": ["r_pasillo_p1_31", "r_pasillo_p1_29", "p_aula_23__p1_"],
+      "r_pasillo_p1_31": ["r_pasillo_p1_32", "r_pasillo_p1_30"],
+      "r_pasillo_p1_32": ["r_pasillo_p1_34", "r_pasillo_p1_31", "r_pasillo_p1_28", "p_cancha_deportiva__p1_"],
+      "r_pasillo_p1_34": ["r_pasillo_p1_41", "r_pasillo_p1_32", "r_pasillo_p1_37"],
+      "r_pasillo_p1_35": ["r_pasillo_p1_27", "r_pasillo_p1_94", "r_pasillo_p1_36", "p_aula_21__p1_"],
+      "r_pasillo_p1_36": ["r_pasillo_p1_82", "r_pasillo_p1_81", "r_pasillo_p1_35"],
+      "r_pasillo_p1_37": ["r_pasillo_p1_38", "r_pasillo_p1_34"],
+      "r_pasillo_p1_38": ["r_pasillo_p1_37", "p_aula_30__p1_"],
+      "r_pasillo_p1_39": ["r_pasillo_p1_40", "r_pasillo_p1_41"],
+      "r_pasillo_p1_40": ["r_pasillo_p1_39", "p_biodigestor__p1_"],
+      "r_pasillo_p1_41": ["r_pasillo_p1_90", "r_pasillo_p1_34", "r_pasillo_p1_39", "r_pasillo_p1_98"],
+      "r_pasillo_p1_42": ["r_pasillo_p1_44", "r_pasillo_p1_89", "r_pasillo_p1_43"],
+      "r_pasillo_p1_43": ["p__rea_de_mesas___cocina__p1_", "r_pasillo_p1_42"],
+      "r_pasillo_p1_44": ["r_pasillo_p1_13", "r_pasillo_p1_42", "r_pasillo_p1_21"],
+      "r_pasillo_p1_45": ["r_pasillo_p1_97", "r_pasillo_p1_46"],
+      "r_pasillo_p1_46": ["r_pasillo_p1_45", "r_pasillo_p1_47"],
+      "r_pasillo_p1_47": ["r_pasillo_p1_49", "r_pasillo_p1_48", "r_pasillo_p1_46"],
+      "r_pasillo_p1_48": ["r_pasillo_p1_47"],
+      "r_pasillo_p1_49": ["r_pasillo_p1_51", "r_pasillo_p1_88", "r_pasillo_p1_47"],
+      "r_pasillo_p1_51": ["r_pasillo_p1_62", "r_pasillo_p1_49", "p_aula_11__p1_"],
+      "r_pasillo_p1_52": ["r_pasillo_p1_53", "r_pasillo_p1_56", "p_port_n_3__p1_"],
+      "r_pasillo_p1_53": ["r_pasillo_p1_54", "r_pasillo_p1_52", "p_aula_12__p1_"],
+      "r_pasillo_p1_54": ["r_pasillo_p1_76", "r_pasillo_p1_53", "r_pasillo_p1_95"],
+      "r_pasillo_p1_56": ["p_lavadero_2__p1_", "r_pasillo_p1_52"],
+      "r_pasillo_p1_57": [],
+      "r_pasillo_p1_59": ["r_pasillo_p1_95", "r_pasillo_p1_63", "p_aula_15__p1_"],
+      "r_pasillo_p1_60": ["r_pasillo_p1_63", "r_pasillo_p1_61", "p_aula_14__p1_"],
+      "r_pasillo_p1_61": ["r_pasillo_p1_60", "r_pasillo_p1_73", "r_pasillo_p1_62", "p_aula_10__p1_"],
+      "r_pasillo_p1_62": ["r_pasillo_p1_61", "r_pasillo_p1_65", "r_pasillo_p1_51", "p_aula_25__p1_"],
+      "r_pasillo_p1_63": ["r_pasillo_p1_59", "r_pasillo_p1_60", "r_pasillo_p1_117"],
+      "r_pasillo_p1_64": ["r_pasillo_p1_67", "r_pasillo_p1_86", "r_pasillo_p1_65", "r_pasillo_p1_71", "r_pasillo_p1_88"],
+      "r_pasillo_p1_65": ["r_pasillo_p1_62", "r_pasillo_p1_64"],
+      "r_pasillo_p1_66": ["r_pasillo_p1_22", "r_pasillo_p1_67", "r_pasillo_p1_87", "p_aula_24__p1_"],
+      "r_pasillo_p1_67": ["r_pasillo_p1_66", "r_pasillo_p1_64", "r_pasillo_p1_68", "r_pasillo_p1_70", "p_escenaro__p1_"],
+      "r_pasillo_p1_68": ["r_pasillo_p1_67", "r_pasillo_p1_69", "r_pasillo_p1_25"],
+      "r_pasillo_p1_69": ["r_pasillo_p1_70", "r_pasillo_p1_68", "r_pasillo_p1_83"],
+      "r_pasillo_p1_70": ["r_pasillo_p1_67", "r_pasillo_p1_69", "r_pasillo_p1_72", "r_pasillo_p1_71"],
+      "r_pasillo_p1_71": ["r_pasillo_p1_64", "r_pasillo_p1_73", "r_pasillo_p1_70"],
+      "r_pasillo_p1_72": ["r_pasillo_p1_70", "r_pasillo_p1_82", "r_pasillo_p1_73", "r_pasillo_p1_115"],
+      "r_pasillo_p1_73": ["r_pasillo_p1_72", "r_pasillo_p1_92", "r_pasillo_p1_61", "r_pasillo_p1_71", "r_pasillo_p1_115"],
+      "r_pasillo_p1_74": ["r_pasillo_p1_79", "r_pasillo_p1_91", "r_pasillo_p1_75"],
+      "r_pasillo_p1_75": ["r_pasillo_p1_74", "r_pasillo_p1_76", "p_aula_16__p1_"],
+      "r_pasillo_p1_76": ["r_pasillo_p1_75", "r_pasillo_p1_54"],
+      "r_pasillo_p1_77": ["r_pasillo_p1_78"],
+      "r_pasillo_p1_78": ["r_pasillo_p1_77", "r_pasillo_p1_79", "p_aula_18__p1_"],
+      "r_pasillo_p1_79": ["r_pasillo_p1_78", "r_pasillo_p1_74", "p_aula_17__p1_", "r_pasillo_p1_116"],
+      "r_pasillo_p1_80": ["r_pasillo_p1_81", "p_aula_de_industrial__p1_", "p_taller_de_industrial__p1_"],
+      "r_pasillo_p1_81": ["r_pasillo_p1_36", "r_pasillo_p1_80", "p_aula_20__p1_"],
+      "r_pasillo_p1_82": ["r_pasillo_p1_72", "r_pasillo_p1_36"],
+      "r_pasillo_p1_83": ["r_pasillo_p1_69", "r_pasillo_p1_94", "p_chalet_2__p1_", "p_cafet_n__p1_"],
+      "r_pasillo_p1_84": ["r_pasillo_p1_27", "r_pasillo_p1_85", "p_ciber__p1_"],
+      "r_pasillo_p1_85": ["r_pasillo_p1_84", "r_pasillo_p1_25", "p_chalet_1__p1_", "p_cafet_n__p1_"],
+      "r_pasillo_p1_86": ["r_pasillo_p1_64", "r_pasillo_p1_87", "p_aula_9__p1_"],
+      "r_pasillo_p1_87": ["r_pasillo_p1_86", "r_pasillo_p1_66", "p_sub_direcci_n__p1_"],
+      "r_pasillo_p1_88": ["r_pasillo_p1_49", "r_pasillo_p1_64", "p_aula_8__p1_"],
+      "r_pasillo_p1_89": ["r_pasillo_p1_42", "r_pasillo_p1_90", "p_cocina__p1_"],
+      "r_pasillo_p1_90": ["r_pasillo_p1_89", "r_pasillo_p1_41"],
+      "r_pasillo_p1_91": ["r_pasillo_p1_92", "r_pasillo_p1_74", "p_ba_o_de_varones__p1_"],
+      "r_pasillo_p1_92": ["r_pasillo_p1_73", "r_pasillo_p1_91", "p_ba_o_de_ni_as_2__p1_"],
+      "r_pasillo_p1_94": ["r_pasillo_p1_83", "r_pasillo_p1_35", "p_cafet_n__p1_"],
+      "r_pasillo_p1_95": ["r_pasillo_p1_54", "r_pasillo_p1_59"],
+      "r_pasillo_p1_96": ["r_pasillo_p1_20"],
+      "r_pasillo_p1_97": ["r_pasillo_p1_45", "r_pasillo_p1_99"],
+      "p__rea_de_mesas___cocina__p1_": ["r_pasillo_p1_43"],
+      "p_cocina__p1_": ["r_pasillo_p1_89"],
+      "r_pasillo_p1_98": ["r_pasillo_p1_41", "p_cubiculo_depotivo__p1_"],
+      "p_cubiculo_depotivo__p1_": ["r_pasillo_p1_98"],
+      "p_biodigestor__p1_": ["r_pasillo_p1_40"],
+      "p_aula_30__p1_": ["r_pasillo_p1_38"],
+      "r_pasillo_p1_99": ["p_port_n_2__p1_", "r_pasillo_p1_97", "p_estacionamiento__p1_"],
+      "p_port_n_2__p1_": ["r_pasillo_p1_99"],
+      "p_cancha_deportiva__p1_": ["r_pasillo_p1_32"],
+      "p_aula_23__p1_": ["r_pasillo_p1_30"],
+      "p_aula_22__p1_": ["r_pasillo_p1_29"],
+      "r_pasillo_p1_100": ["r_pasillo_p2_101", "r_pasillo_p2_110", "r_pasillo_p1_23"],
+      "r_pasillo_p2_101": ["r_pasillo_p2_102", "r_pasillo_p1_100", "r_pasillo_p2_110"],
+      "r_pasillo_p2_102": ["r_pasillo_p2_103", "r_pasillo_p2_101"],
+      "r_pasillo_p2_103": ["r_pasillo_p2_104", "r_pasillo_p2_102"],
+      "r_pasillo_p2_104": ["r_pasillo_p2_105", "r_pasillo_p2_103"],
+      "r_pasillo_p2_105": ["p_aula_1__p2_", "r_pasillo_p2_106", "r_pasillo_p2_104"],
+      "r_pasillo_p2_106": ["p_aula_2__p2_", "r_pasillo_p2_107", "r_pasillo_p2_105"],
+      "r_pasillo_p2_107": ["p_aula_de_m_sica__p2_", "r_pasillo_p2_108", "r_pasillo_p2_106"],
+      "r_pasillo_p2_108": ["p_aula_3__p2_", "r_pasillo_p2_109", "r_pasillo_p2_107"],
+      "r_pasillo_p2_109": ["p_aula_4__p2_", "r_pasillo_p2_108"],
+      "p_aula_1__p2_": ["r_pasillo_p2_105"],
+      "p_aula_2__p2_": ["r_pasillo_p2_106"],
+      "p_aula_3__p2_": ["r_pasillo_p2_108"],
+      "p_aula_4__p2_": ["r_pasillo_p2_109"],
+      "p_aula_de_m_sica__p2_": ["r_pasillo_p2_107"],
+      "r_pasillo_p2_110": ["r_pasillo_p2_101", "r_pasillo_p1_100"],
+      "r_pasillo_p1_111": ["r_pasillo_p1_112", "p_aula_6__p1_"],
+      "r_pasillo_p1_112": ["r_pasillo_p1_24", "r_pasillo_p1_111", "p_aula_5__p1_"],
+      "r_pasillo_p1_113": ["r_pasillo_p1_114", "r_pasillo_p1_24", "p_biblioteca_entrada_2__p1_"],
+      "r_pasillo_p1_114": ["r_pasillo_p1_23", "r_pasillo_p1_113", "p_biblioteca_entrada_1__p1_", "p_escenaro__p1_"],
+      "p_aula_6__p1_": ["r_pasillo_p1_111"],
+      "p_aula_5__p1_": ["r_pasillo_p1_112"],
+      "p_biblioteca_entrada_1__p1_": ["r_pasillo_p1_114"],
+      "p_biblioteca_entrada_2__p1_": ["r_pasillo_p1_113"],
+      "p_aula_21__p1_": ["r_pasillo_p1_35"],
+      "p_aula_de_industrial__p1_": ["r_pasillo_p1_80"],
+      "p_taller_de_industrial__p1_": ["r_pasillo_p1_80"],
+      "p_aula_20__p1_": ["r_pasillo_p1_81"],
+      "r_pasillo_p1_115": ["r_pasillo_p1_72", "p_aula_19__p1_", "r_pasillo_p1_73"],
+      "p_aula_19__p1_": ["r_pasillo_p1_115"],
+      "p_aula_17__p1_": ["r_pasillo_p1_79"],
+      "p_aula_18__p1_": ["r_pasillo_p1_78"],
+      "p__rea_de_mesas__p1_": ["r_pasillo_p1_116"],
+      "r_pasillo_p1_116": ["r_pasillo_p1_79", "p__rea_de_mesas__p1_"],
+      "p_aula_16__p1_": ["r_pasillo_p1_75"],
+      "p_ba_o_de_ni_as_2__p1_": ["r_pasillo_p1_92"],
+      "p_ba_o_de_varones__p1_": ["r_pasillo_p1_91"],
+      "p_aula_15__p1_": ["r_pasillo_p1_59"],
+      "p_aula_14__p1_": ["r_pasillo_p1_60"],
+      "p_aula_13__p1_": ["r_pasillo_p1_117"],
+      "r_pasillo_p1_117": ["p_aula_13__p1_", "r_pasillo_p1_63"],
+      "p_aula_10__p1_": ["r_pasillo_p1_61"],
+      "p_aula_25__p1_": ["r_pasillo_p1_62"],
+      "p_lavadero_2__p1_": ["r_pasillo_p1_56"],
+      "p_port_n_3__p1_": ["r_pasillo_p1_52"],
+      "p_aula_12__p1_": ["r_pasillo_p1_53"],
+      "p_aula_11__p1_": ["r_pasillo_p1_51"],
+      "p_aula_9__p1_": ["r_pasillo_p1_86"],
+      "p_sub_direcci_n__p1_": ["r_pasillo_p1_87"],
+      "p_aula_24__p1_": ["r_pasillo_p1_66"],
+      "p_aula_8__p1_": ["r_pasillo_p1_88"],
+      "p_aula_7__p1_": ["r_pasillo_p1_20"],
+      "p_escenaro__p1_": ["r_pasillo_p1_67"]
+    };
+
+    // CONFIGURAR MAPA LEAFLET
+    const map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -1,
+      maxZoom: 3,
+      zoomControl: false
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    const bounds = [[0, 0], [576, 1024]];
+    L.imageOverlay('mapa_humboldt.png', bounds).addTo(map);
+    map.fitBounds(bounds);
+
+    let lineaRuta = null;
+    let marcadorOrigen = null;
+    let marcadorDestino = null;
+
+    let tomOrigen, tomDestino;
+
+    // MOSTRAR/OCULTAR PANEL EN MÓVILES
+    function toggleControlPanel() {
+      const panel = document.getElementById('controlPanel');
+      panel.classList.toggle('active');
+    }
+
+    // POBLAR SELECTORES CON CATEGORÍAS
+    function inicializarSelectoresOrganizados() {
+      const aulas = [];
+      const admin = [];
+      const banos = [];
+      const institucion = [];
+      const portones = [];
+
+      Object.keys(nodos).forEach(id => {
+        const nodo = nodos[id];
+        if (nodo.tipo === 'puerta') {
+          if (nodo.categoria === 'aulas') aulas.push({ id, ...nodo });
+          else if (nodo.categoria === 'admin') admin.push({ id, ...nodo });
+          else if (nodo.categoria === 'banos') banos.push({ id, ...nodo });
+          else if (nodo.categoria === 'institucion') institucion.push({ id, ...nodo });
+          else if (nodo.categoria === 'portones') portones.push({ id, ...nodo });
+        }
+      });
+
+      aulas.sort((a, b) => (a.num !== undefined ? a.num : 999) - (b.num !== undefined ? b.num : 999));
+      admin.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      banos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      institucion.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      portones.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+      function construirOpciones(selectId) {
+        const sel = document.getElementById(selectId);
+        let html = '<option value="">Selecciona ubicación...</option>';
+
+        if (aulas.length) {
+          html += '<optgroup label="Aulas">';
+          aulas.forEach(a => html += `<option value="${a.id}">${a.nombre}</option>`);
+          html += '</optgroup>';
+        }
+        if (admin.length) {
+          html += '<optgroup label="Área Administrativa">';
+          admin.forEach(a => html += `<option value="${a.id}">${a.nombre}</option>`);
+          html += '</optgroup>';
+        }
+        if (banos.length) {
+          html += '<optgroup label="Baños">';
+          banos.forEach(b => html += `<option value="${b.id}">${b.nombre}</option>`);
+          html += '</optgroup>';
+        }
+        if (institucion.length) {
+          html += '<optgroup label="Áreas de la Institución">';
+          institucion.forEach(s => html += `<option value="${s.id}">${s.nombre}</option>`);
+          html += '</optgroup>';
+        }
+        if (portones.length) {
+          html += '<optgroup label="Portones y Entradas">';
+          portones.forEach(p => html += `<option value="${p.id}">${p.nombre}</option>`);
+          html += '</optgroup>';
+        }
+
+        sel.innerHTML = html;
+      }
+
+      construirOpciones('selectOrigen');
+      construirOpciones('selectDestino');
+
+      const configTom = {
+        create: false,
+        maxOptions: 100,
+        placeholder: "Buscar ubicación...",
+        onChange: function(val) {
+          this.setValue(val, true);
+        }
+      };
+
+      tomOrigen = new TomSelect('#selectOrigen', configTom);
+      tomDestino = new TomSelect('#selectDestino', configTom);
+    }
+
+    // ALGORITMO DIJKSTRA
+    function calcularDistancia(p1, p2) {
+      return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+    }
+
+    function dijkstra(inicio, fin) {
+      const dist = {}, prev = {}, q = new Set();
+      Object.keys(nodos).forEach(k => { dist[k] = Infinity; prev[k] = null; q.add(k); });
+      dist[inicio] = 0;
+
+      while (q.size > 0) {
+        let u = null;
+        q.forEach(k => { if (u === null || dist[k] < dist[u]) u = k; });
+        if (u === fin || dist[u] === Infinity) break;
+        q.delete(u);
+
+        (conexiones[u] || []).forEach(v => {
+          if (q.has(v)) {
+            const alt = dist[u] + calcularDistancia(nodos[u].pos, nodos[v].pos);
+            if (alt < dist[v]) { dist[v] = alt; prev[v] = u; }
+          }
+        });
+      }
+
+      const camino = [];
+      let u = fin;
+      while (u !== null) { camino.unshift(u); u = prev[u]; }
+      return (camino.length > 1 && camino[0] === inicio) ? camino : null;
+    }
+
+    // DIBUJAR RUTA
+    function calcularRuta() {
+      const o = tomOrigen.getValue();
+      const d = tomDestino.getValue();
+
+      if (!o || !d) return alert("Por favor selecciona tanto el Origen como el Destino.");
+      if (o === d) return alert("El Origen y el Destino no pueden ser iguales.");
+
+      limpiarRuta();
+
+      const ruta = dijkstra(o, d);
+      if (!ruta) return alert("No hay una ruta conectada entre estos dos puntos.");
+
+      const coords = ruta.map(id => nodos[id].pos);
+
+      lineaRuta = L.polyline(coords, {
+        color: '#0284c7',
+        weight: 6,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      marcadorOrigen = L.circleMarker(nodos[o].pos, {
+        radius: 9,
+        fillColor: '#22c55e',
+        color: '#ffffff',
+        weight: 3,
+        fillOpacity: 1
+      }).bindPopup(`<b>Origen:</b><br>${nodos[o].nombre}`).addTo(map);
+
+      marcadorDestino = L.circleMarker(nodos[d].pos, {
+        radius: 10,
+        fillColor: '#ef4444',
+        color: '#ffffff',
+        weight: 3,
+        fillOpacity: 1
+      }).bindPopup(`<b>Destino:</b><br>${nodos[d].nombre}`).addTo(map);
+
+      map.fitBounds(lineaRuta.getBounds(), { padding: [60, 60] });
+      document.getElementById('btnClear').style.display = 'block';
+
+      // Ocultar panel en móviles tras trazar la ruta
+      if (window.innerWidth <= 600) {
+        document.getElementById('controlPanel').classList.remove('active');
+      }
+    }
+
+    function limpiarRuta() {
+      if (lineaRuta) map.removeLayer(lineaRuta);
+      if (marcadorOrigen) map.removeLayer(marcadorOrigen);
+      if (marcadorDestino) map.removeLayer(marcadorDestino);
+
+      lineaRuta = null;
+      marcadorOrigen = null;
+      marcadorDestino = null;
+
+      document.getElementById('btnClear').style.display = 'none';
+      map.fitBounds(bounds);
+    }
+
+    inicializarSelectoresOrganizados();
+  </script>
+</body>
+</html>
